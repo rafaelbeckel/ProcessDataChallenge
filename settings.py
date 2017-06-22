@@ -1,0 +1,5 @@
+MONGODB_URL = 'localhost'
+MONGODB_PORT = 27017
+MONGODB_DATABASE = 'shopback'
+
+FAKER_LANGUAGE = 'pt_BR'
