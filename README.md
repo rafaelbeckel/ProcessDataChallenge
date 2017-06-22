@@ -1,8 +1,18 @@
-# Challenge
+# Data Dragon
 
-Processamento e leitura de quantidade grande quantidade de dados
+Make the world a better place by crunching one row at a time
 
-## Desafio da Shopback
+## Basic Usage
+
+datadragon generate [OPTIONS]
+--users=30000000
+--batch=10000
+
+datadragon report
+
+
+
+
 
 Tendo como base um banco nosql, temos que processar as informações de todas tabelas e gerar uma nova tabela.
 O imporante é que o script consuma a menor quantidade de recursos do servidor, seja de fácil entendimento e manutenção
