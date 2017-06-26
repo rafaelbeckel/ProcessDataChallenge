@@ -1,16 +1,13 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='datadragon',
     version='0.1',
-    py_modules=['datadragon', 
-                'settings', 
-                'data'],
+    packages=find_packages(),
     install_requires=[
         'Click',
         'Faker',
-        'Pymongo',
-        'Tblib'
+        'Pymongo'
     ],
     entry_points='''
         [console_scripts]
