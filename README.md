@@ -1,10 +1,9 @@
 ## Instalação
-`virtualenv -p python3 envname`
-
-`. venv/bin/activate`
-
-`pip install -e .`
-
+```bash
+virtualenv -p python3 venv`
+. venv/bin/activate
+pip install -e .
+```
 
 ## Configuração
 Editar variáveis no arquivo settings.py ou passar opções via commandline.
