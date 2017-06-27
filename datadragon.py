@@ -37,7 +37,7 @@ def reset(hard):
                help = 'Number of child processes to run insertion jobs.'   )
 @click.option( '--reset',    is_flag=True,  
                help = 'Drop all records before inserting.'                 )
-def generate(users, products, batch, workers, reset, verbose):
+def generate(users, products, batch, workers, reset):
     """Inserts fake users, products and shopping activity data in MongoDB"""
     if (reset):
         reset(hard=False)
@@ -48,7 +48,6 @@ def generate(users, products, batch, workers, reset, verbose):
                     batch_size = batch,
                     workers = workers)
     
-    seeder.verbose = verbose
     seeder.run()
     print('Finished in ' + seeder.elapsed_time + 's')
 
