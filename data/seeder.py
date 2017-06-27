@@ -17,9 +17,6 @@ class Seeder:
     total_activity = 0
     
     def __init__(self, database, **options):
-        """ 
-        Start all instance variables
-        """
         self.db = database
         
         self.total_products = options.get('total_products', settings.PRODUCTS_COUNT)
