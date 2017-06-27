@@ -1,6 +1,8 @@
 ## Instalação
 `virtualenv -p python3 envname`
+
 `. venv/bin/activate`
+
 `pip install -e .`
 
 
@@ -47,7 +49,7 @@ Depois de gerar os produtos, o seeder cria uma tabela intermediária "activity"
 que junta dados de clientes com carrinhos/pedidos e então usa o próprio Mongo 
 para gerar as tabelas separadas com referências reais uma para a outra.
 
-Essa modificação reduziu o tempo de geração das tabelas em 3x.
+Essa modificação reduziu o tempo de geração das tabelas em ~3x.
 
 
 ## Aggregation framework
