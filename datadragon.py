@@ -8,7 +8,6 @@ from data.seeder import Seeder
 
 db = DB()
 
-
 @click.group(context_settings = dict(help_option_names = ['-h', '--help']))
 def main():
     pass
@@ -28,17 +27,15 @@ def reset(hard):
     
 
 @main.command()
-@click.option( '-u', '--users',    default = settings.USERS_COUNT, 
+@click.option( '--users',    default = settings.USERS_COUNT, 
                help = 'Number of users to be inserted in the database.'    )
-@click.option( '-p', '--products', default = settings.PRODUCTS_COUNT, 
+@click.option( '--products', default = settings.PRODUCTS_COUNT, 
                help = 'Number of products to be inserted in the database.' )
-@click.option( '-b', '--batch',    default = settings.BATCH_SIZE, 
+@click.option( '--batch',    default = settings.BATCH_SIZE, 
                help = 'Number of records to be created in each iteration.' )
-@click.option( '-w', '--workers',  default = mp.cpu_count(), 
+@click.option( '--workers',  default = mp.cpu_count(), 
                help = 'Number of child processes to run insertion jobs.'   )
-@click.option( '-r', '--reset',    is_flag=True,  
-               help = 'Drop all records before inserting.'                 )
-@click.option( '-v', '--verbose',  is_flag=True,  
+@click.option( '--reset',    is_flag=True,  
                help = 'Drop all records before inserting.'                 )
 def generate(users, products, batch, workers, reset, verbose):
     """Inserts fake users, products and shopping activity data in MongoDB"""
@@ -51,7 +48,7 @@ def generate(users, products, batch, workers, reset, verbose):
                     batch_size = batch,
                     workers = workers)
     
-    seeder.verbose = 
+    seeder.verbose = verbose
     seeder.run()
     print('Finished in ' + seeder.elapsed_time + 's')
 
@@ -59,10 +56,12 @@ def generate(users, products, batch, workers, reset, verbose):
 @main.command()
 def crunch():
     """Generates and crunches some data in MongoDB"""
-    print("Hi!")
+    #@TODO
+    return
 
 
 @main.command()
-def report():
+def query():
     """Queries the generated table"""
-    print("Hi!")
+    #@TODO
+    return

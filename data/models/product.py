@@ -1,6 +1,6 @@
 import settings
 from faker import Faker
-from random import randint, choice, random
+from random import randint, sample, random
 from data.models.model import Model
 from data.models.category import categories
 
@@ -19,10 +19,8 @@ class Product(Model):
             product = {
                 'title' : fake.sentence(2),
                 'description' : fake.sentence(50),
-                'categories' : list(set(
-                     [choice(categories) for _ in range(randint(1,5))]
-                )),
-                'price' : round(random()*settings.MAX_PRICE,2),
+                'categories' : sample(categories, randint(1,4)),
+                'price' : round(random()*settings.MAX_PRODUCT_PRICE,2)
             }
             
             yield product

@@ -2,7 +2,7 @@ class Model:
     db = None
     collection = None
     
-    def __init__(self, db):
+    def __init__(self, db=None):
         self.db = db
         
     def count(self):
@@ -23,3 +23,6 @@ class Model:
         return self.db[self.collection].aggregate(
             pipeline
         )
+        
+    def drop(self):
+        self.db[self.collection].drop()

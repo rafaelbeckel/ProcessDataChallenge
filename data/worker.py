@@ -33,9 +33,6 @@ class Worker:
         model_module = importlib.import_module('data.models.'+options['model'])
         model_class = getattr(model_module, options['model'].capitalize())
         self.model = model_class(self.db)
-        if 'model_attributes' in options:
-            for attr, value in options['model_attributes'].items():
-                setattr(self.model, attr, value)
     
     
     def run(self):
@@ -61,11 +58,11 @@ class Worker:
         print(self.report(self.batch_size, batch_time))
     
     
-    def report(self, records, time, verb='inserted', suffix='...'):
+    def report(self, records, time, action='inserted', suffix='...'):
         """ 
         Prints worker activity
         """
-        return ('Worker ' + self.name + ' ' + verb + ' ' + str(records) + ' '
+        return ('Worker ' + self.name + ' ' + action + ' ' + str(records) + ' '
                 + self.model.collection + ' in ' + str(time) + 's' + suffix)
 
 

@@ -4,8 +4,8 @@ import settings
 import multiprocessing as mp
 
 from datetime import datetime
-from data.models import user, product #, order, cart, category
 from data.worker import worker_job, worker_success, worker_error
+from data.models.activity import Activity
 
 
 class Seeder:
@@ -13,6 +13,8 @@ class Seeder:
     Generates records in the database
     """
     verbose = False
+    activity = None
+    total_activity = 0
     
     def __init__(self, database, **options):
         """ 
@@ -33,42 +35,106 @@ class Seeder:
         """
         start = datetime.now()
         
-        self._start_workers()
-        self._report_inserts()
-        
+        self._generate_products()
         self._generate_ecommerce_activity()
-        self._report_inserts()
+        
+        self.activity = Activity(self.db.database)
+        self._generate_users()
+        self._generate_carts()
+        self._generate_orders()
+        self.activity.drop()
         
         self.elapsed_time = str((datetime.now() - start).seconds)
+        self.print_status()
     
     
-    def _start_workers(self):
+    def _generate_products(self):
         """ 
-        Delegates jobs to generate fake data.
+        Generates fake products.
         """
-        user_load = self.total_users // self.workers
-        product_load = self.total_products // self.workers
+        payload = self.total_products // self.workers
         
         for _ in range(self.workers):
-            self._start_worker('user', user_load)
-            self._start_worker('product', product_load)
+            self._start_worker('product', payload)
+            
+        self._report_inserts(['products'])
     
     
     def _generate_ecommerce_activity(self):
         """ 
-        Simulates user's activity in stores
+        Generates a temporary collection that is used once. 
+        It will be transformed into collections of users, carts and orders.
         """
-        return
+        self.total_activity = self.total_users
+        payload = self.total_activity // self.workers
+        
+        for _ in range(self.workers):
+            self._start_worker('activity', payload)
+        
+        self._report_inserts(['activity'])
     
     
-    def _start_worker(self, model, worker_load, **kwargs):
+    def _generate_users(self):
+        """ 
+        Generates user collection.
+        """
+        print('generating users collection...')
+        self.activity.aggregate([
+            {'$project' : {
+                'customer_id' : '$user_id',
+                'email' : '$user_email',
+                'details' : {
+                    'first_name' : '$user_first_name',
+                    'last_name' : '$user_last_name',
+                    'full_name' : '$user_full_name'
+                }
+            }},
+            {'$out' : 'users'}
+        ])
+        
+    
+    def _generate_carts(self):
+        """ 
+        Generates carts collection.
+        """
+        print('generating carts collection...')
+        self.activity.aggregate([
+            {'$unwind' : '$carts'},
+            {'$project': {
+                '_id' : 0,
+                'customer_id' : '$user_id',
+                'products' : '$carts.cart_products',
+                'amount' : '$carts.cart_amount'
+            }},
+            {'$out' : 'carts'}
+        ])
+        
+        
+    def _generate_orders(self):
+        """ 
+        Generates orders collection.
+        """
+        print('generating orders collection...')
+        self.activity.aggregate([
+            {'$unwind' : '$carts'},
+            {'$project': {
+                '_id' : 0,
+                'customer_id' : '$user_id',
+                'cart_id' : '$carts.cart_id',
+                'created_at' : '$carts.order_created_at'
+            }},
+            {'$out' : 'orders'}
+        ])
+    
+    
+    def _start_worker(self, model, payload, **kwargs):
         """ 
         Starts a worker assyncronously.
         """
         self.pool.apply_async(worker_job, 
             args = [{
                 'model' : model,
-                'payload' : worker_load,
+                'payload' : payload,
                 'batch_size' : self.batch_size,
                 'database' : self.db.database_name
             }],
@@ -77,26 +143,38 @@ class Seeder:
         )
     
     
-    def _report_inserts(self):
+    def _report_inserts(self, collections):
         """ Prints record count until we reach max number of inserts.
             It runs syncronously, so it'll prevent our program from 
             terminating before every record is inserted.
         """
         seconds = 0
-        products = 0
-        users = 0
+        last_count = 0
+        count = {c : 0 for c in collections}
         
-        while (products < self.total_products or users < self.total_users):
-            products = self.db.count('products')
-            users = self.db.count('users')
-            if (seconds >= 0 and seconds % 30 == 0):
-                self._print_status()
+        while any(count[c] < getattr(self, 'total_' + c) for c in collections):
+
+            for c in collections:
+                count[c] = self.db.count(c)
+                
+            if (seconds >= 0 and seconds % 10 == 0):
+                if count[c] == last_count:
+                    print('... still working ...') #@TODO progress bar
+                else:
+                    self.print_status()
+                last_count = count[c]
+                
             time.sleep(1)
             seconds += 1
         
-        self._print_status()
-            
+        self.print_status()
+        
     
-    def _print_status(self):
+    def print_status(self):
+        print('')
         print('We have ' + str(self.db.count('products')) + ' total products')
+        print('We have ' + str(self.db.count('activity')) + ' temp activity records')
         print('We have ' + str(self.db.count('users')) + ' total users')
+        print('We have ' + str(self.db.count('carts')) + ' total carts')
+        print('We have ' + str(self.db.count('orders')) + ' total orders')
+        print('')
