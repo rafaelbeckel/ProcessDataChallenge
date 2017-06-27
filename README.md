@@ -27,7 +27,7 @@ para essa quantidade, dependendo de quantos produtos os "usuários" comprem.
 `datadragon [COMMAND] --help` Lista opções disponíveis para o comando
 
 
-## Sobre minha experiëncia com o teste
+## Sobre minha experiência com o teste
 Me concentrei mais na geração do dataset do que na consulta.
 
 O script usa todos os cores da máquina para otimizar a geração dos dados. A classe
