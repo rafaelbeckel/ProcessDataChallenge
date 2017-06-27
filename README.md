@@ -1,6 +1,6 @@
 ## Instalação
 ```bash
-virtualenv -p python3 venv`
+virtualenv -p python3 venv
 . venv/bin/activate
 pip install -e .
 ```
