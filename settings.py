@@ -20,13 +20,13 @@ PRODUCTS_COUNT=80
 MAX_PRODUCT_PRICE=400
 
 # Max orders of a single product
-MAX_PRODUCT_QUANTITY=5
+MAX_PRODUCT_QUANTITY=6
 
 # Max number of products in cart
 MAX_PRODUCTS_IN_CART=3
 
 # Max orders for each customer
-MAX_ORDERS_PER_USER=6
+MAX_ORDERS_PER_USER=5
 
 # How old can a order be
 MAX_ORDER_AGE='-1y'

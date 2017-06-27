@@ -61,7 +61,7 @@ def crunch():
 
 
 @main.command()
-def query():
+def find():
     """Queries the generated table"""
     #@TODO
     return
