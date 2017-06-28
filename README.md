@@ -1,8 +1,9 @@
 ## Instalação
-`virtualenv -p python3 envname`
-`. venv/bin/activate`
-`pip install -e .`
-
+```bash
+virtualenv -p python3 venv
+. venv/bin/activate
+pip install -e .
+```
 
 ## Configuração
 Editar variáveis no arquivo settings.py ou passar opções via commandline.
@@ -26,7 +27,7 @@ para essa quantidade, dependendo de quantos produtos os "usuários" comprem.
 `datadragon [COMMAND] --help` Lista opções disponíveis para o comando
 
 
-## Sobre minha experiëncia com o teste
+## Sobre minha experiência com o teste
 Me concentrei mais na geração do dataset do que na consulta.
 
 O script usa todos os cores da máquina para otimizar a geração dos dados. A classe
@@ -47,7 +48,7 @@ Depois de gerar os produtos, o seeder cria uma tabela intermediária "drafts"
 que junta dados de clientes com carrinhos/pedidos e então usa o próprio Mongo 
 para gerar as tabelas separadas com referências reais uma para a outra.
 
-Essa modificação reduziu o tempo de geração das tabelas em 3x.
+Essa modificação reduziu o tempo de geração das tabelas em ~3x.
 
 
 ## Aggregation framework
