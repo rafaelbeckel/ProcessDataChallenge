@@ -97,4 +97,4 @@ class Draft(Model):
         return fake.date_time_between(
             start_date = settings.MAX_ORDER_AGE, 
             end_date = 'now'
-        ).isoformat('T')
+        )
