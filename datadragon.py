@@ -3,6 +3,7 @@ import settings
 import multiprocessing as mp
 
 from data.db import DB
+from pprint import pprint
 from data.seeder import Seeder
 
 
@@ -37,31 +38,40 @@ def reset(hard):
                help = 'Number of child processes to run insertion jobs.'   )
 @click.option( '--reset',    is_flag=True,  
                help = 'Drop all records before inserting.'                 )
-def generate(users, products, batch, workers, reset, verbose):
+def generate(users, products, batch, workers, reset):
     """Inserts fake users, products and shopping activity data in MongoDB"""
     if (reset):
         reset(hard=False)
-        
-    seeder = Seeder(db, 
+    
+    seeder = Seeder(db.database, 
                     total_products = products, 
                     total_users = users,
                     batch_size = batch,
                     workers = workers)
     
-    seeder.verbose = verbose
     seeder.run()
     print('Finished in ' + seeder.elapsed_time + 's')
 
 
 @main.command()
 def crunch():
-    """Generates and crunches some data in MongoDB"""
+    """Crunches shopping activity and generates activity collection"""
+    
     #@TODO
-    return
+    
+    pass
 
 
 @main.command()
-def find():
-    """Queries the generated table"""
-    #@TODO
-    return
+@click.option( '--query',
+               help = 'Queries the new table.')
+def find(query):
+    """Queries the activity table and print results"""
+    if db.database['activity'].count():
+        cursor = db.database['activity'].find(query)
+        for document in cursor:
+            pprint(document)
+    
+    else:
+        print('')
+        print('You need to run "generate" and "crunch" commands first')

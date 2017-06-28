@@ -17,7 +17,7 @@ USERS_COUNT=800
 PRODUCTS_COUNT=80
 
 # Max price of a single product
-MAX_PRODUCT_PRICE=400
+MAX_PRODUCT_PRICE=200
 
 # Max orders of a single product
 MAX_PRODUCT_QUANTITY=6

@@ -8,7 +8,7 @@
 Editar variáveis no arquivo settings.py ou passar opções via commandline.
 
 O script está configurado para 800 usuários e um máximo de 6 pedidos por usuário,
-o que pode gerar até 4800 pedidos. Com 8 cores, a execução leva entre 30s e 2 minutos 
+o que pode gerar até 4800 pedidos. Com 8 cores, a execução leva entre 30s e 1 minuto 
 para essa quantidade, dependendo de quantos produtos os "usuários" comprem.
 
 
@@ -43,7 +43,7 @@ não é eficiente para uma grande quantidade de dados.
 Gerar carts e orders aleatórios sem fazer referências iria tornar a tabela nova 
 inútil. Então tentei uma abordagem diferente para o mesmo problema:
 
-Depois de gerar os produtos, o seeder cria uma tabela intermediária "activity" 
+Depois de gerar os produtos, o seeder cria uma tabela intermediária "drafts" 
 que junta dados de clientes com carrinhos/pedidos e então usa o próprio Mongo 
 para gerar as tabelas separadas com referências reais uma para a outra.
 
@@ -63,8 +63,15 @@ db.aggregate({
 })
 ```
 
-Essa técnica é usada no seeder para transformar a tabela temporária "activity"
-nas tabelas "user", "carts" e "orders" (linhas 77 a 127). 
+Essa técnica é usada no seeder para transformar a tabela temporária "drafts"
+nas tabelas "user", "carts" e "orders". 
+
+O caso da nova tabela é mais complexo. No arquivo cruncher.py (incompleto) dá 
+pra ver como eu comecei a abordar o problema (eu seguiria por esse caminho).
+
+O mais eficiente seria gerar as tabelas com um formato mais otimizado direto no 
+seeder, mas eu queria que o seeder simplesmente modelasse o problema exatamente 
+como foi anunciado; e a responsabilidade do cruncher seria resolver o problema.
 
 
 #### Estrutura da Nova Tabela

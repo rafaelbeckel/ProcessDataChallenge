@@ -7,22 +7,14 @@ class DB:
     """
     client = None
     database = None
-    database_name = None
     
     def __init__(self, **options):
-        self.url = options.get('url', settings.MONGODB_URL)
-        self.port = options.get('port', settings.MONGODB_PORT)
-        self.database_name = options.get('database', settings.MONGODB_DATABASE)
+        url = options.get('url', settings.MONGODB_URL)
+        port = options.get('port', settings.MONGODB_PORT)
+        database_name = options.get('database', settings.MONGODB_DATABASE)
         
-        self.client = MongoClient(self.url, self.port)
-        self.database = self.client[self.database_name]
-        
-        
-    def count(self, collection):
-        """
-        Counts total records of a given collection
-        """
-        return self.database[collection].count()
+        self.client = MongoClient(url, port)
+        self.database = self.client[database_name]
         
         
     def reset(self):
@@ -30,11 +22,9 @@ class DB:
         Drops all collections from the database
         """
         db = self.database
-        db.activity.drop()
-        db.orders.drop()
-        db.carts.drop()
-        db.products.drop()
-        db.users.drop()
+        collections = db.collection_names(include_system_collections=False)
+        for collection in collections:
+            self.database[collection].drop()
         
 
     def hard_reset(self):

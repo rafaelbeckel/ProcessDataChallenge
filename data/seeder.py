@@ -3,23 +3,18 @@ import time
 import settings
 import multiprocessing as mp
 
+from pymongo import DESCENDING
 from datetime import datetime
 from data.worker import worker_job, worker_success, worker_error
-from data.models.activity import Activity
+from data.models.draft import Draft
 
 
 class Seeder:
     """
-    Generates records in the database
+    Generates fake records in the database
     """
-    verbose = False
-    activity = None
-    total_activity = 0
     
     def __init__(self, database, **options):
-        """ 
-        Start all instance variables
-        """
         self.db = database
         
         self.total_products = options.get('total_products', settings.PRODUCTS_COUNT)
@@ -36,13 +31,13 @@ class Seeder:
         start = datetime.now()
         
         self._generate_products()
-        self._generate_ecommerce_activity()
+        self._generate_activity_drafts()
         
-        self.activity = Activity(self.db.database)
+        self.drafts = Draft(self.db)
         self._generate_users()
         self._generate_carts()
         self._generate_orders()
-        self.activity.drop()
+        self.drafts.drop()
         
         self.elapsed_time = str((datetime.now() - start).seconds)
         self.print_status()
@@ -53,78 +48,33 @@ class Seeder:
         Generates fake products.
         """
         payload = self.total_products // self.workers
+        remainder = self.total_products % self.workers
         
         for _ in range(self.workers):
             self._start_worker('product', payload)
             
+        if remainder:
+            self._start_worker('product', remainder)
+            
         self._report_inserts(['products'])
     
     
-    def _generate_ecommerce_activity(self):
+    def _generate_activity_drafts(self):
         """ 
         Generates a temporary collection that is used once. 
         It will be transformed into collections of users, carts and orders.
         """
-        self.total_activity = self.total_users
-        payload = self.total_activity // self.workers
+        self.total_drafts = self.total_users
+        payload = self.total_drafts // self.workers
+        remainder = self.total_drafts % self.workers
         
         for _ in range(self.workers):
-            self._start_worker('activity', payload)
+            self._start_worker('draft', payload)
+            
+        if remainder:
+            self._start_worker('draft', remainder)
         
-        self._report_inserts(['activity'])
-    
-    
-    def _generate_users(self):
-        """ 
-        Generates user collection.
-        """
-        print('generating users collection...')
-        self.activity.aggregate([
-            {'$project' : {
-                'customer_id' : '$user_id',
-                'email' : '$user_email',
-                'details' : {
-                    'first_name' : '$user_first_name',
-                    'last_name' : '$user_last_name',
-                    'full_name' : '$user_full_name'
-                }
-            }},
-            {'$out' : 'users'}
-        ])
-        
-    
-    def _generate_carts(self):
-        """ 
-        Generates carts collection.
-        """
-        print('generating carts collection...')
-        self.activity.aggregate([
-            {'$unwind' : '$carts'},
-            {'$project': {
-                '_id' : 0,
-                'customer_id' : '$user_id',
-                'products' : '$carts.cart_products',
-                'amount' : '$carts.cart_amount'
-            }},
-            {'$out' : 'carts'}
-        ])
-        
-        
-    def _generate_orders(self):
-        """ 
-        Generates orders collection.
-        """
-        print('generating orders collection...')
-        self.activity.aggregate([
-            {'$unwind' : '$carts'},
-            {'$project': {
-                '_id' : 0,
-                'customer_id' : '$user_id',
-                'cart_id' : '$carts.cart_id',
-                'created_at' : '$carts.order_created_at'
-            }},
-            {'$out' : 'orders'}
-        ])
+        self._report_inserts(['drafts'])
     
     
     def _start_worker(self, model, payload, **kwargs):
@@ -136,17 +86,77 @@ class Seeder:
                 'model' : model,
                 'payload' : payload,
                 'batch_size' : self.batch_size,
-                'database' : self.db.database_name
+                'database' : self.db.name
             }],
             callback       = worker_success,
             error_callback = worker_error 
         )
+        
+        
+    def _generate_users(self):
+        """ 
+        Generates user collection.
+        """
+        print('generating users collection...')
+        self.drafts.aggregate([
+            {'$project' : {
+                'customer_id' : '$user_id',
+                'email' : '$user_email',
+                'details' : {
+                    'first_name' : '$user_first_name',
+                    'last_name' : '$user_last_name',
+                    'full_name' : '$user_full_name'
+                }
+            }},
+            {'$out' : 'users'}
+        ])
+        self.db.users.create_index('customer_id', unique=True)
+        
+        
+    
+    def _generate_carts(self):
+        """ 
+        Generates carts collection.
+        """
+        print('generating carts collection...')
+        self.drafts.aggregate([
+            {'$unwind' : '$carts'},
+            {'$project': {
+                '_id' : '$carts.cart_id',
+                'customer_id' : '$user_id',
+                'products' : '$carts.cart_products',
+                'amount' : '$carts.cart_amount'
+            }},
+            {'$out' : 'carts'}
+        ])
+        self.db['carts'].create_index('customer_id')
+        
+        
+    def _generate_orders(self):
+        """ 
+        Generates orders collection.
+        """
+        print('generating orders collection...')
+        self.drafts.aggregate([
+            {'$unwind' : '$carts'},
+            {'$project': {
+                '_id' : 0,
+                'customer_id' : '$user_id',
+                'cart_id' : '$carts.cart_id',
+                'created_at' : '$carts.order_created_at'
+            }},
+            {'$out' : 'orders'}
+        ])
+        self.db['orders'].create_index('customer_id')
+        self.db['orders'].create_index('cart_id')
+        self.db['orders'].create_index([('created_at', DESCENDING)])
     
     
     def _report_inserts(self, collections):
-        """ Prints record count until we reach max number of inserts.
-            It runs syncronously, so it'll prevent our program from 
-            terminating before every record is inserted.
+        """ 
+        Prints record count until we reach max number of inserts.
+        It runs syncronously, so it'll prevent our program from 
+        terminating before every record is inserted.
         """
         seconds = 0
         last_count = 0
@@ -155,7 +165,7 @@ class Seeder:
         while any(count[c] < getattr(self, 'total_' + c) for c in collections):
 
             for c in collections:
-                count[c] = self.db.count(c)
+                count[c] = self.db[c].count()
                 
             if (seconds >= 0 and seconds % 10 == 0):
                 if count[c] == last_count:
@@ -172,9 +182,9 @@ class Seeder:
     
     def print_status(self):
         print('')
-        print('We have ' + str(self.db.count('products')) + ' total products')
-        print('We have ' + str(self.db.count('activity')) + ' temp activity records')
-        print('We have ' + str(self.db.count('users')) + ' total users')
-        print('We have ' + str(self.db.count('carts')) + ' total carts')
-        print('We have ' + str(self.db.count('orders')) + ' total orders')
+        print('We have ' + str(self.db['products'].count()) + ' total products')
+        print('We have ' + str(self.db['drafts'].count()) + ' draft records')
+        print('We have ' + str(self.db['users'].count()) + ' total users')
+        print('We have ' + str(self.db['carts'].count()) + ' total carts')
+        print('We have ' + str(self.db['orders'].count()) + ' total orders')
         print('')
