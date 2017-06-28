@@ -24,8 +24,8 @@ class Cruncher:
         
         users = User(self.db)
         
-        #let's create an intermediate table
-        #joining carts and orders
+        # let's create an intermediate table
+        # joining carts, orders, products and categories
         db.carts.aggregate([
             {'$lookup' : {
                 'from': 'orders',
@@ -34,21 +34,71 @@ class Cruncher:
                 'as': 'order'
             }},
             {'$unwind' : '$order'},
-            {'$project' : {
-                'customer_id' : '$customer_id',
-                'amount' : '$amount',
-                'products' : '$products',
+            {'$addFields' : { 
+                'cart_id': '$order.cart_id',
                 'date' : '$order.created_at',
-                'month' : {'$month' : '$order.created_at'}
+                'month' : {'$month' : '$order.created_at'},
+                'year' : {'$year' : '$order.created_at'}
             }},
-        ]).pretty()
+            {'$unwind' : '$products'},
+            {'$addFields' : {
+                'product_id' : '$products.product_id',
+                'product_quantity' : '$products.quantity',
+                'product_price' : '$products.price'
+            }},
+            {'$lookup' : {
+                'from': 'products',
+                'localField': 'product_id',
+                'foreignField': '_id',
+                'as': 'product'
+            }},
+            {'$unwind' : '$product'},
+            {'$project' : {
+                '_id' : 0,
+                'cart_id' : 1,
+                'customer_id' : 1,
+                'amount' : 1,
+                'product_id' : 1,
+                'product_quantity' : 1,
+                'product_price' : 1,
+                'product_categories' : '$product.categories',
+                'date' : 1,
+                'month' : 1,
+                'year' : 1
+            }},
+            {'$out' : 'normalized_carts'}
+        ])
+        
+        
+        # A operação vai gerar esse documento:
+        # {
+        #     "_id" : ObjectId("595396a54f24114dce9ba819"),
+        #     "amount" : 660.45,
+        #     "customer_id" : ObjectId("595396a54f24114dce9ba817"),
+        #     "cart_id" : ObjectId("595396a54f24114dce9ba819"),
+        #     "date" : ISODate("2017-04-24T12:51:59Z"),
+        #     "month" : 4,
+        #     "year" : 2017,
+        #     "product_id" : ObjectId("595396a24f24114dcf9ba7fe"),
+        #     "product_quantity" : 4,
+        #     "product_price" : 117.46,
+        #     "product_categories" : [
+        #             "Games",
+        #             "Informática e Tablets",
+        #             "Eletrodomésticos"
+        #     ]
+        # }
+        
+        
+        
+        
         
         db.users.aggregate([
             {'$lookup' : {
                 'from': 'orders',
                 'localField': 'customer_id',
                 'foreignField': 'customer_id',
-                'as': 'orders'
+                'as': 'normalized_carts'
             }},
             {'$project' : {
                 'customer_id' : '$customer_id',
@@ -57,25 +107,13 @@ class Cruncher:
                     'first_name' : '$first_name',
                     'last_name' : '$last_name'
                 },
+                
+                #... $group ...
                 
             },
-            {'$lookup' : {
-                'from': 'carts',
-                'localField': 'customer_id',
-                'foreignField': 'customer_id',
-                'as': 'carts'
-            }},
-            {'$project' : {
-                'customer_id' : '$customer_id',
-                'email' : '$email',
-                'details' : {
-                    'first_name' : '$first_name',
-                    'last_name' : '$last_name'
-                },
-                
-            }
             
-            ]).pretty()
+            
+            ])
             
             
         #     {'$project' : {
