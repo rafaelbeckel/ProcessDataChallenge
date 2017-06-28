@@ -6,7 +6,7 @@ pip install -e .
 ```
 
 ## Configuração
-Editar variáveis no arquivo settings.py ou passar opções via commandline.
+Editar variáveis no arquivo **settings.py** ou passar opções via commandline.
 
 O script está configurado para 800 usuários e um máximo de 6 pedidos por usuário,
 o que pode gerar até 4800 pedidos. Com 8 cores, a execução leva entre 30s e 1 minuto 
@@ -31,9 +31,9 @@ para essa quantidade, dependendo de quantos produtos os "usuários" comprem.
 Me concentrei mais na geração do dataset do que na consulta.
 
 O script usa todos os cores da máquina para otimizar a geração dos dados. A classe
-Seeder delega o trabalho para os Workers, que rodam em paralelo (um em cada core).
+**Seeder** delega o trabalho para os **Workers**, que rodam em paralelo (um em cada core).
 
-Cada Model em data/models tem um método "generator(num)" que é usado pelos Workers 
+Cada **Model** em data/models tem um método `generator(num)` que é usado pelos Workers 
 para criar uma lista de documentos que serão inseridas no banco com insert_many().
 
 Na hora de gerar as tabelas de carrinho e pedidos, encontrei um problema: elas
@@ -44,14 +44,14 @@ não é eficiente para uma grande quantidade de dados.
 Gerar carts e orders aleatórios sem fazer referências iria tornar a tabela nova 
 inútil. Então tentei uma abordagem diferente para o mesmo problema:
 
-Depois de gerar os produtos, o seeder cria uma tabela intermediária "drafts" 
+Depois de gerar os produtos, o seeder cria uma tabela intermediária **"drafts"** 
 que junta dados de clientes com carrinhos/pedidos e então usa o próprio Mongo 
 para gerar as tabelas separadas com referências reais uma para a outra.
 
 Essa modificação reduziu o tempo de geração das tabelas em ~3x.
 
 
-## Aggregation framework
+## Aggregation framework (data/cruncher.py)
 Embora não tenha finalizado a tempo o enunciado do teste, imagino que a abordagem 
 esperada seria algo usando o agreggation framework do Mongo, mais ou menos assim:
 
@@ -67,12 +67,14 @@ db.aggregate({
 Essa técnica é usada no seeder para transformar a tabela temporária "drafts"
 nas tabelas "user", "carts" e "orders". 
 
-O caso da nova tabela é mais complexo. No arquivo cruncher.py (incompleto) dá 
-pra ver como eu comecei a abordar o problema (eu seguiria por esse caminho).
+O caso da nova tabela é mais complexo. No arquivo **cruncher.py** (incompleto) dá 
+pra ver como eu comecei a abordar o problema (eu seguiria por esse caminho). O comando 
+`db.carts.aggregate` está funcional. Se copiar/colar ele no console do Mongo, vai 
+funcionar e gerar uma nova tabela chamada `normalized_carts` (Precisa do **MongoDB 3.4+**).
 
 O mais eficiente seria gerar as tabelas com um formato mais otimizado direto no 
-seeder, mas eu queria que o seeder simplesmente modelasse o problema exatamente 
-como foi anunciado; e a responsabilidade do cruncher seria resolver o problema.
+seeder, mas eu queria que o seeder simplesmente *modelasse* o problema exatamente 
+como foi anunciado; e a responsabilidade do cruncher seria *resolver* o problema.
 
 
 #### Estrutura da Nova Tabela
