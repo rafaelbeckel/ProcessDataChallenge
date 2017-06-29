@@ -60,7 +60,7 @@ com a estrutura especificada abaixo em "Estrutura da nova tabela".
 
 O mais eficiente seria gerar as tabelas com um formato mais otimizado direto no 
 seeder, mas eu queria que o seeder simplesmente *modelasse* o problema exatamente 
-como foi anunciado; e a responsabilidade do *cruncher* seria resolver o problema.
+como foi anunciado; e a responsabilidade do cruncher seria *resolver* o problema.
 
 
 ### Comando find
