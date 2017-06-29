@@ -65,7 +65,7 @@ como foi anunciado; e a responsabilidade do cruncher seria *resolver* o problema
 
 ### Comando find
 
-Delega uma query para o comando `find` do MongoDB na colação `activity`.
+Delega uma query para o comando `find` do MongoDB na coleção `activity`.
 
 
 ## Estrutura da Nova Tabela
