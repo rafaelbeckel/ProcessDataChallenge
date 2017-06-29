@@ -1,3 +1,4 @@
+import ast
 import click
 import settings
 import multiprocessing as mp
@@ -5,6 +6,7 @@ import multiprocessing as mp
 from data.db import DB
 from pprint import pprint
 from data.seeder import Seeder
+from data.cruncher import Cruncher
 
 
 db = DB()
@@ -56,10 +58,17 @@ def generate(users, products, batch, workers, reset):
 @main.command()
 def crunch():
     """Crunches shopping activity and generates activity collection"""
-    
-    #@TODO
-    
-    pass
+    if db.database['users'].count() &&
+       db.database['carts'].count() &&
+       db.database['orders'].count() &&
+       db.database['products'].count():
+        cruncher = Cruncher(db.database)
+        cruncher.run()
+        print('Finished in ' + cruncher.elapsed_time + 's')
+        
+    else:
+        print('')
+        print('You need to run "generate" command first')
 
 
 @main.command()
@@ -68,7 +77,7 @@ def crunch():
 def find(query):
     """Queries the activity table and print results"""
     if db.database['activity'].count():
-        cursor = db.database['activity'].find(query)
+        cursor = db.database['activity'].find( ast.literal_eval(query) )
         for document in cursor:
             pprint(document)
     

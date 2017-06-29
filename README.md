@@ -4,13 +4,11 @@ virtualenv -p python3 venv
 . venv/bin/activate
 pip install -e .
 ```
+Depende do MongoDB 3.4 ou superior.
+
 
 ## Configuração
-Editar variáveis no arquivo settings.py ou passar opções via commandline.
-
-O script está configurado para 800 usuários e um máximo de 6 pedidos por usuário,
-o que pode gerar até 4800 pedidos. Com 8 cores, a execução leva entre 30s e 1 minuto 
-para essa quantidade, dependendo de quantos produtos os "usuários" comprem.
+Editar variáveis no arquivo **settings.py** ou passar opções via commandline.
 
 
 ## Execução
@@ -18,98 +16,132 @@ para essa quantidade, dependendo de quantos produtos os "usuários" comprem.
 
 `datadragon reset` Apaga todos os documentos de todas as coleções
 
-`datadragon crunch` (não foi implementado) Gera a tabela nova
+`datadragon crunch` Gera a tabela activities (ver formato abaixo)
 
-`datadragon find "{...}"` (não foi implementado) Consulta a tabela nova
+`datadragon find "{...}"` Consulta a tabela activities
 
 `datadragon --help` Lista os comandos disponíveis
 
 `datadragon [COMMAND] --help` Lista opções disponíveis para o comando
 
 
-## Sobre minha experiência com o teste
-Me concentrei mais na geração do dataset do que na consulta.
+## Observações
+
+Imagine que você viva num mundo bizarro em que o produto "Lorem Ipsum" pode ser 
+um livro, um eletrodoméstico e um game ao mesmo tempo. Criamos o datadragon para 
+analisar os dados de compra desses produtos cósmicos da sétima dimensão.
+
+
+### Comando generate
+
+Gera produtos, usuários, carrinhos e pedidos fictícios.
 
 O script usa todos os cores da máquina para otimizar a geração dos dados. A classe
-Seeder delega o trabalho para os Workers, que rodam em paralelo (um em cada core).
+**Seeder** delega o trabalho para os **Workers**, que rodam em paralelo (um em cada core).
 
-Cada Model em data/models tem um método "generator(num)" que é usado pelos Workers 
-para criar uma lista de documentos que serão inseridas no banco com insert_many().
+Cada **Model** em data/models tem um método `generator(num)` que é usado pelos Workers 
+para criar uma lista de documentos que serão inseridos no banco com `insert_many()`.
 
-Na hora de gerar as tabelas de carrinho e pedidos, encontrei um problema: elas
-precisam fazer referência às outras tabelas. Isso estava sendo feito no próprio
-generator() delas, o que rodava uma consulta dentro de cada loop. Funciona, mas 
-não é eficiente para uma grande quantidade de dados.
-
-Gerar carts e orders aleatórios sem fazer referências iria tornar a tabela nova 
-inútil. Então tentei uma abordagem diferente para o mesmo problema:
-
-Depois de gerar os produtos, o seeder cria uma tabela intermediária "drafts" 
+Depois de gerar os produtos, o seeder cria uma tabela intermediária **"drafts"** 
 que junta dados de clientes com carrinhos/pedidos e então usa o próprio Mongo 
-para gerar as tabelas separadas com referências reais uma para a outra.
+para gerar as tabelas user, carts e orders com referências reais uma para a outra.
 
-Essa modificação reduziu o tempo de geração das tabelas em ~3x.
+O script está configurado para 800 usuários e um máximo de 6 pedidos por usuário,
+o que pode gerar até 4800 pedidos. Com 8 cores, a geração das collections leva 
+entre 30s e 1 minuto para essa quantidade.
 
 
-## Aggregation framework
-Embora não tenha finalizado a tempo o enunciado do teste, imagino que a abordagem 
-esperada seria algo usando o agreggation framework do Mongo, mais ou menos assim:
+### Comando crunch
 
-```python3
-db.aggregate({
-    '$project' : {
-        ... # (estrutura da nova tabela)
-    },
-    {'$out' : 'nova_tabela'}
-})
-```
+Analisa os carrinhos e pedidos dos usuários e gera uma nova coleção chamada 'activity'.
 
-Essa técnica é usada no seeder para transformar a tabela temporária "drafts"
-nas tabelas "user", "carts" e "orders". 
-
-O caso da nova tabela é mais complexo. No arquivo cruncher.py (incompleto) dá 
-pra ver como eu comecei a abordar o problema (eu seguiria por esse caminho).
+O script usa o Aggregation Framework nativo do MongoDB para gerar a nova tabela
+com a estrutura especificada abaixo em "Estrutura da nova tabela".
 
 O mais eficiente seria gerar as tabelas com um formato mais otimizado direto no 
-seeder, mas eu queria que o seeder simplesmente modelasse o problema exatamente 
-como foi anunciado; e a responsabilidade do cruncher seria resolver o problema.
+seeder, mas eu queria que o seeder simplesmente *modelasse* o problema exatamente 
+como foi anunciado; e a responsabilidade do *cruncher* seria resolver o problema.
 
 
-#### Estrutura da Nova Tabela
+### Comando find
+
+Delega uma query para o comando `find` do MongoDB na colação `activity`.
+
+
+## Estrutura da Nova Tabela
 ```
 {
-    “_id” : “XXXXX”,
-    "customer_id" : "58d549d3808c3c0b89263d51",
-    "email" : "joselito@aol.com",
-    "details" : {
-        "first_name" : "joselito",
-        "last_name" : "mesquita”
-    },
-    “monthly_spenses”: {
-        “jan” : 123.45,
-        “fev” : 678.90,
-        “mar” : 0, 
-        …
-    }, 
-    “categorized_monthly_expenses” : {
-        “jan” : {  
-            “categoria_1” : 123.00,
-            “categoria_2” : 0.45
-        },    
-        …
-    },
-    “monthly_avg_expense” : 345.67,
-    “categorized_monthly_avg_expense” : {
-        “categoria_1” : 123.00,
-        “categoria_2” : 0.45
-        …
-    }
+    "_id" : ObjectId("595523a34f24116035bf5c71"),
+    "customer_id" : ObjectId("595523a24f24116035bf5c6d"),
+    "email" : "joao07@teixeira.org",
+    "full_name" : "Francisco Castro",
+    "average_monthly_expenses" : 476.68
+    "monthly_expenses" : [
+        {
+            "year" : 2017,
+            "month" : 2,
+            "amount" : 586.07
+        },
+        {
+            "year" : 2017,
+            "month" : 4,
+            "amount" : 1430.06
+        },
+        {
+            "year" : 2016,
+            "month" : 12,
+            "amount" : 1009.49
+        }
+    ],
+    "categorized_monthly_expenses" : [
+        {
+                "category" : "Móveis e Decoração",
+                "year" : 2017,
+                "month" : 2,
+                "amount" : 5.96
+        },
+        {
+                "category" : "Viagens",
+                "year" : 2017,
+                "month" : 4,
+                "amount" : 698.3
+        },
+        {
+                "category" : "Games",
+                "year" : 2016,
+                "month" : 12,
+                "amount" : 151.02
+        },
+        
+        ...
+        
+    ],
+    "categorized_average_monthly_expenses" : [
+        {
+                "category" : "Móveis e Decoração",
+                "amount" : 232.76
+        },
+        {
+                "category" : "Games",
+                "amount" : 232.76
+        },
+        {
+                "category" : "Filmes, Séries e Música",
+                "amount" : 243.92
+        },
+        {
+                "category" : "Viagens",
+                "amount" : 232.76
+        }
+    ],
+}
 ```
 
 
 ## Estrutura das outras tabelas 
-A estrutura das tabelas foi simplificada, mantendo apenas os campos que eram 
-relevantes para o escopo do teste
+
+A estrutura das tabelas anunciadas foi simplificada, mantendo apenas os campos 
+que eram relevantes para o escopo do teste
 
 #### Tabela de usuários
 ```

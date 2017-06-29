@@ -1,14 +1,5 @@
-import sys
-import time
-import settings
-import multiprocessing as mp
-
-from datetime import datetime
-from data.worker import worker_job, worker_success, worker_error
-from data.models.user import User
-from data.models.cart import Cart
-from data.models.order import Order
-from data.models.product import Product
+from pymongo import DESCENDING
+from datetime import datetime, date, timedelta
 
 
 class Cruncher:
@@ -20,13 +11,14 @@ class Cruncher:
         self.db = database
     
     
-    def run():
+    def run(self):
+        start = datetime.now()
         
-        users = User(self.db)
+        # @TODO organizar as queries abaixo em métodos separados
         
         # let's create an intermediate table
         # joining carts, orders, products and categories
-        db.carts.aggregate([
+        self.db['carts'].aggregate([
             {'$lookup' : {
                 'from': 'orders',
                 'localField': '_id',
@@ -66,134 +58,169 @@ class Cruncher:
                 'month' : 1,
                 'year' : 1
             }},
-            {'$out' : 'normalized_carts'}
+            {'$out' : 'denormalized_carts'}
         ])
+        self.db['denormalized_carts'].create_index([('date', DESCENDING)])
+        self.db['denormalized_carts'].create_index([('year', DESCENDING)])
+        self.db['denormalized_carts'].create_index([('month', DESCENDING)])
+        self.db['denormalized_carts'].create_index('cart_id')
+        self.db['denormalized_carts'].create_index('customer_id')
         
         
-        # A operação vai gerar esse documento:
-        # {
-        #     "_id" : ObjectId("595396a54f24114dce9ba819"),
-        #     "amount" : 660.45,
-        #     "customer_id" : ObjectId("595396a54f24114dce9ba817"),
-        #     "cart_id" : ObjectId("595396a54f24114dce9ba819"),
-        #     "date" : ISODate("2017-04-24T12:51:59Z"),
-        #     "month" : 4,
-        #     "year" : 2017,
-        #     "product_id" : ObjectId("595396a24f24114dcf9ba7fe"),
-        #     "product_quantity" : 4,
-        #     "product_price" : 117.46,
-        #     "product_categories" : [
-        #             "Games",
-        #             "Informática e Tablets",
-        #             "Eletrodomésticos"
-        #     ]
-        # }
-        
-        
-        
-        
-        
-        db.users.aggregate([
-            {'$lookup' : {
-                'from': 'orders',
-                'localField': 'customer_id',
-                'foreignField': 'customer_id',
-                'as': 'normalized_carts'
+        # Monthly Expenses
+        self.db['denormalized_carts'].aggregate([
+            {'$group' : {
+                '_id' : '$cart_id',
+                'date' : { '$first' : '$date' },
+                'year' : { '$first' : '$year' },
+                'month' : { '$first' : '$month' },
+                'amount' : { '$first' : '$amount' },
+                'customer_id' : { '$first' : '$customer_id' }
+            }},
+            {'$group' : {
+                '_id' : { 'year' : '$year', 
+                          'month' : '$month', 
+                          'customer_id' : '$customer_id' },
+                'amount' : { '$sum' : '$amount' },
+                'date' : { '$first' : '$date' }
             }},
             {'$project' : {
-                'customer_id' : '$customer_id',
-                'email' : '$email',
-                'details' : {
-                    'first_name' : '$first_name',
-                    'last_name' : '$last_name'
-                },
-                
-                #... $group ...
-                
-            },
-            
-            
-            ])
-            
-            
-        #     {'$project' : {
-        #         'customer_id' : '$customer_id',
-        #         'email' : '$email',
-        #         'details' : {
-        #             'first_name' : '$first_name',
-        #             'last_name' : '$last_name'
-        #         },
-        #         'monthly_expenses' : {
-        #             'jan' : '',
-        #             'fev' : '',
-        #             'mar' : '',
-        #             'abr' : '',
-        #             'mai' : '',
-        #             'jun' : '',
-        #             'jul' : '',
-        #             'ago' : '',
-        #             'set' : '',
-        #             'out' : '',
-        #             'nov' : '',
-        #             'dev' : ''
-        #         },
-        #         'categorized_monthly_expenses' : {
-        #             'jan' : {
-        #                 'categoria_1' : 123.00,
-        #                 'categoria_2' : 0.45
-        #             },
-        #             'fev' : '',
-        #             'mar' : '',
-        #             'abr' : '',
-        #             'mai' : '',
-        #             'jun' : '',
-        #             'jul' : '',
-        #             'ago' : '',
-        #             'set' : '',
-        #             'out' : '',
-        #             'nov' : '',
-        #             'dev' : ''
-        #         },
-        #         'monthly_avg_expense' : '',
-        #         'categorized_monthly_avg_expense' : {
-        #             'categoria_1' : 123.00,
-        #             'categoria_2' : 0.45
-        #         }
-        #     }},
-        # ],
-        # {
-        #     'allowDiskUse': 'true'
-        # })
+                '_id' : 0,
+                'date' : '$date',
+                'year' : '$_id.year',
+                'month' : '$_id.month',
+                'customer_id' : '$_id.customer_id',
+                'amount' : '$amount'
+            }},
+            {'$out' : 'monthly_expenses'}
+        ])
+        self.db['monthly_expenses'].create_index([('date', DESCENDING)])
+        self.db['monthly_expenses'].create_index([('year', DESCENDING)])
+        self.db['monthly_expenses'].create_index([('month', DESCENDING)])
+        self.db['monthly_expenses'].create_index('customer_id')
         
-        # """
-        # {
-        #     "customer_id" : "58d549d3808c3c0b89263d51",
-        #     "email" : "joselito@aol.com",
-        #     "details" : {
-        #         "first_name" : "joselito",
-        #         "last_name" : "mesquita”
-        #     },
-        #     “monthly_spenses”: {
-        #         “jan” : 123.45,
-        #         “fev” : 678.90,
-        #         “mar” : 0, 
-        #         …
-        #     }, 
-        #     “categorized_monthly_expenses” : {
-        #         “jan” : {  
-        #             “categoria_1” : 123.00,
-        #             “categoria_2” : 0.45
-        #         },    
-        #         …
-        #     },
-        #     “monthly_avg_expense” : 345.67,
-        #     “categorized_monthly_avg_expense” : {
-        #         “categoria_1” : 123.00,
-        #         “categoria_2” : 0.45
-        #         …
-        #     }
-        # """
-        # pass
-    
-    
-    
+        
+        # Categorized Monthly Expenses
+        self.db['denormalized_carts'].aggregate([
+            {'$project' : {
+                'date' : 1,
+                'year' : 1,
+                'month' : 1,
+                'customer_id' : 1,
+                'category' : '$product_categories',
+                'category_amount' : { '$multiply' : [ '$product_price', '$product_quantity' ]}
+            }},
+            {'$unwind' : '$category'},
+            {'$group' : {
+                '_id' : { 'customer_id' : '$customer_id',
+                          'category' : '$category',
+                          'year' : '$year',
+                          'month' : '$month' },
+                'category_amount' : { '$sum' : '$category_amount'},
+                'date' : { '$first' : '$date' }
+            }},
+            {'$project' : {
+                '_id' : 0,
+                'date' : '$date',
+                'year' : '$_id.year',
+                'month' : '$_id.month',
+                'customer_id' : '$_id.customer_id',
+                'category' : '$_id.category',
+                'amount' : '$category_amount'
+            }},
+            {'$out' : 'categorized_monthly_expenses'}
+        ])
+        self.db['categorized_monthly_expenses'].create_index([('date', DESCENDING)])
+        self.db['categorized_monthly_expenses'].create_index([('year', DESCENDING)])
+        self.db['categorized_monthly_expenses'].create_index([('month', DESCENDING)])
+        self.db['categorized_monthly_expenses'].create_index('customer_id')
+           
+        
+        # Average last three months
+        this_month = date.today()
+        three_months = timedelta(3 * 365/12)
+        three_months_ago = (this_month - three_months).replace(day = 1)
+        three_months_ago = datetime.combine(three_months_ago, datetime.min.time())
+        
+        self.db['monthly_expenses'].aggregate([
+            {'$match' : { 'date' : { '$gt' : three_months_ago } }},
+            {'$group' : {
+                '_id' : '$customer_id',
+                'amount' : { '$sum' : '$amount' }
+            }},
+            {'$project' : {
+                '_id' : 0,
+                'customer_id' : '$_id',
+                'amount' : { '$divide' : [ '$amount', 3 ] }
+            }},
+            {'$out' : 'average_monthly_expenses'}
+        ])
+        self.db['average_monthly_expenses'].create_index('customer_id')
+        
+        
+        # Average last three months per category
+        self.db['categorized_monthly_expenses'].aggregate([
+            {'$match' : { 'date' : { '$gt' : three_months_ago } }},
+            {'$group' : {
+                '_id' : { 'customer_id' : '$customer_id',
+                          'category' : '$category' },
+                'amount' : { '$sum' : '$amount' }
+            }},
+            {'$project' : {
+                '_id' : 0,
+                'customer_id' : '$_id.customer_id',
+                'category' : '$_id.category',
+                'amount' : { '$divide' : [ '$amount', 3 ] }
+            }},
+            {'$out' : 'categorized_average_monthly_expenses'}
+        ])
+        self.db['categorized_average_monthly_expenses'].create_index('customer_id')
+        
+        
+        # Generate Activity Collection
+        self.db['users'].aggregate([
+            {'$lookup' : {
+                'from': 'monthly_expenses',
+                'localField': 'customer_id',
+                'foreignField': 'customer_id',
+                'as': 'monthly_expenses'
+            }},
+            {'$lookup' : {
+                'from': 'categorized_monthly_expenses',
+                'localField': 'customer_id',
+                'foreignField': 'customer_id',
+                'as': 'categorized_monthly_expenses'
+            }},
+            {'$lookup' : {
+                'from': 'average_monthly_expenses',
+                'localField': 'customer_id',
+                'foreignField': 'customer_id',
+                'as': 'average_monthly_expenses'
+            }},
+            {'$lookup' : {
+                'from': 'categorized_average_monthly_expenses',
+                'localField': 'customer_id',
+                'foreignField': 'customer_id',
+                'as': 'categorized_average_monthly_expenses'
+            }},
+            {'$project' : {
+                'email' : 1,
+                'customer_id' : 1,
+                'full_name' : '$details.full_name',
+                'monthly_expenses.year' : 1,
+                'monthly_expenses.month' : 1,
+                'monthly_expenses.amount' : 1,
+                'categorized_monthly_expenses.year' : 1,
+                'categorized_monthly_expenses.month' : 1,
+                'categorized_monthly_expenses.amount' : 1,
+                'categorized_monthly_expenses.category' : 1,
+                'average_monthly_expenses' : {'$arrayElemAt' : ['$average_monthly_expenses.amount', 0]},
+                'categorized_average_monthly_expenses.amount' : 1,
+                'categorized_average_monthly_expenses.category' : 1
+            }},
+            {'$out' : 'activity'}
+        ])
+        self.db['activity'].create_index('customer_id')
+        
+        
+        self.elapsed_time = str((datetime.now() - start).seconds)
