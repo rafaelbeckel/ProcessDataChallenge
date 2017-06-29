@@ -58,10 +58,10 @@ def generate(users, products, batch, workers, reset):
 @main.command()
 def crunch():
     """Crunches shopping activity and generates activity collection"""
-    if db.database['users'].count() &&
-       db.database['carts'].count() &&
-       db.database['orders'].count() &&
-       db.database['products'].count():
+    if (db.database['users'].count() and
+        db.database['carts'].count() and
+        db.database['orders'].count() and
+        db.database['products'].count()):
         cruncher = Cruncher(db.database)
         cruncher.run()
         print('Finished in ' + cruncher.elapsed_time + 's')
@@ -79,7 +79,21 @@ def find(query):
     if db.database['activity'].count():
         cursor = db.database['activity'].find( ast.literal_eval(query) )
         for document in cursor:
-            pprint(document)
+            print('_________________________________________')
+            print('id: ' + str(document.get('customer_id')))
+            print('E-mail: ' + document.get('email'))
+            print('Full Name: ' + document.get('full_name'))
+            print('Average Expenses (last 3 months): ' + str(round(document.get('average_monthly_expenses', 0),2)))
+            print('')
+            print('Monthly Expenses:')
+            pprint(document.get('monthly_expenses'))
+            print('')
+            print('Monthly expenses / category:')
+            pprint(document.get('categorized_monthly_expenses'))
+            print('')
+            print('Average monthly expenses / category (last 3 months):')
+            pprint(document.get('categorized_monthly_expenses'))
+            print('_________________________________________')
     
     else:
         print('')

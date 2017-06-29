@@ -98,6 +98,7 @@ class Seeder:
         Generates user collection.
         """
         print('generating users collection...')
+        
         self.drafts.aggregate([
             {'$project' : {
                 'customer_id' : '$user_id',
@@ -119,6 +120,7 @@ class Seeder:
         Generates carts collection.
         """
         print('generating carts collection...')
+        
         self.drafts.aggregate([
             {'$unwind' : '$carts'},
             {'$project': {
@@ -137,6 +139,7 @@ class Seeder:
         Generates orders collection.
         """
         print('generating orders collection...')
+        
         self.drafts.aggregate([
             {'$unwind' : '$carts'},
             {'$project': {
